@@ -14,6 +14,7 @@ namespace GIIS21.SqlEngine
     public static class DataBaseData
     {
         public static String _database = "JDB_POS_2";
+        //public static String _servername = ".\\SQLEXPRESS";
         public static String _servername = "serv40";
         public static String _serverlogin = "tamuz";
         public static String _serverpassword = "effy1";

@@ -27,9 +27,14 @@ namespace POS20
             
             InitializeComponent();
         
+            //Product product = new Product();
+            //product.ID = 22;
+            //product.Model = "Sasha1";
+            //product.Stones = new List<Stone>();
+
             Product product = new Product();
-            product.ID = 22;
-            product.Model = "Sasha1";
+            product.ID = 1;
+            product.Model = "Sasha2";
             product.Stones = new List<Stone>();
 
             Stone stone1 = new Stone();
