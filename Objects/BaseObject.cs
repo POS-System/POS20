@@ -14,7 +14,7 @@ namespace POS20.Objects
     public class BaseObject : ISave
     {
         private Int32 _iD;
-        private Int64 _timeStamp;
+        private byte[] _timeStamp;
 
         [SqlInputColumn()]
         public virtual int ID
@@ -30,17 +30,17 @@ namespace POS20.Objects
             }
         }
 
-        [SqlInputColumn(Name = "TimeStamp", Type = typeof(Int64))]
-        public virtual Int64 TimeStamp
+        [SqlInputColumn(Name = "TimeStamp", Type = typeof(String))]
+        public virtual String TimeStamp
         {
             get
             {
-                return _timeStamp;
+                return Convert.ToBase64String(_timeStamp);
             }
 
             set
             {
-                _timeStamp = value;
+                _timeStamp = System.Text.Encoding.UTF8.GetBytes(value);
             }
         }
 
