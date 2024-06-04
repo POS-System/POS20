@@ -30,8 +30,8 @@ namespace POS20.Objects
             }
         }
 
-        [SqlInputColumn(Name = "TimeStamp", Type = typeof(long))]
-        public virtual long TimeStamp
+        [SqlInputColumn(Name = "TimeStamp", Type = typeof(Int64))]
+        public virtual Int64 TimeStamp
         {
             get
             {
