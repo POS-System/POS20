@@ -15,7 +15,8 @@ namespace POS20.Objects
     {
         private Int32 _iD;
         private Int64 _timeStamp;
-        
+
+        [SqlInputColumn()]
         public virtual int ID
         {
             get
@@ -28,7 +29,8 @@ namespace POS20.Objects
                 _iD = value;
             }
         }
-        
+
+        [SqlInputColumn(Name = "TimeStamp", Type = typeof(long))]
         public virtual long TimeStamp
         {
             get
@@ -47,13 +49,19 @@ namespace POS20.Objects
             SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended();
             return sqlConnectionExtended.Save(this);
         }
+
+        /*public virtual List<T> Select(BaseObject baseObject)
+        {
+            SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended();
+            return sqlConnectionExtended.Select<T>(this);
+        }*/
     }
 
     public class ChildBaseObject : BaseObject
     {
         Int32 _parentID;
 
-        [SqlColumn(Name = "ParentID")]
+        [SqlOutputColumn(Name = "ParentID")]
         public virtual int ParentID
         {
             get

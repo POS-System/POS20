@@ -24,7 +24,7 @@ namespace POS20.Attributes
     }
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class SqlColumnAttribute : Attribute
+    public class SqlOutputColumnAttribute : Attribute
     {
         private Type? _type;
         private string _name;
@@ -54,7 +54,46 @@ namespace POS20.Attributes
             set { _parentID = value; }
         }
 
-        public SqlColumnAttribute()
+        public SqlOutputColumnAttribute()
+        {
+            _type = null;
+            _name = "";
+            _size = 255;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Property)]
+    public class SqlInputColumnAttribute : Attribute
+    {
+        private Type? _type;
+        private string _name;
+        private Int32 _size;
+        private Int32 _parentID;
+
+        public Type? Type
+        {
+            get { return _type; }
+            set { _type = value; }
+        }
+
+        public string Name
+        {
+            get { return _name; }
+            set { _name = value; }
+        }
+
+        public Int32 Size
+        {
+            get { return _size; }
+            set { _size = value; }
+        }
+        public Int32 ParentID
+        {
+            get { return _parentID; }
+            set { _parentID = value; }
+        }
+
+        public SqlInputColumnAttribute()
         {
             _type = null;
             _name = "";

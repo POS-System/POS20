@@ -1,4 +1,6 @@
-﻿using POS20.Attributes;
+﻿using GIIS21.SqlEngine;
+using POS20.Attributes;
+using POS20.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +10,7 @@ using System.Threading.Tasks;
 namespace POS20.Objects
 {
     [SqlTable(Name = "Product")]
-    public class Product : BaseObject
+    public class Product : BaseObject, ISelect<Product>
     {
         private List<Stone> stones;
         private String model;
@@ -18,7 +20,8 @@ namespace POS20.Objects
             stones = new List<Stone>();
         }        
 
-        [SqlColumn(Name = "Model", Type = typeof(String), Size = 40)]
+        [SqlOutputColumn(Name = "Model", Type = typeof(String), Size = 40)]
+        [SqlInputColumn(Name = "Model", Type = typeof(String), Size = 40)]        
         public string Model
         {
             get
@@ -44,6 +47,12 @@ namespace POS20.Objects
             {
                 stones = value;
             }
+        }
+
+        public List<Product> Select(BaseObject baseObject)
+        {
+            SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended();
+            return sqlConnectionExtended.Select<Product>(this);
         }
     }
 }

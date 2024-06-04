@@ -12,7 +12,7 @@ namespace POS20.Objects
     {
         private Int32 type;        
 
-        [SqlColumn(Name = "Type")]
+        [SqlOutputColumn(Name = "Type")]
         public Int32 Type
         {
             get

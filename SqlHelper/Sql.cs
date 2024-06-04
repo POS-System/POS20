@@ -118,6 +118,7 @@ namespace GIIS21.SqlEngine
                         if (baseObject.ID == 0)
                         {
                             Int32.TryParse(data.Rows[0][0].ToString(), out ret);
+                            baseObject.ID = ret;
                         }
                         if (baseObject.ID > 0)
                         {
@@ -149,22 +150,20 @@ namespace GIIS21.SqlEngine
 
                                         if (baseObject.ID > 0)
                                         {
-                                            request = SqlGenerator.UpdateChild(child);
-                                        }
-
-                                        // должно удалиться само каскадно
-                                        /*if (baseObject.ID < 0)
-                                        {
-                                            request = SqlGenerator.Delete(child);
-                                        }*/
+                                            request = SqlGenerator.Update(child);
+                                        }                                       
 
                                         command = new SqlCommand(request, connection);
                                         command.CommandType = CommandType.Text;
                                         reader = command.ExecuteReader();
                                         data = new DataTable();
                                         data.Load(reader);
-                                        Int32 retChild;
-                                        Int32.TryParse(data.Rows[0][0].ToString(), out retChild);
+                                        if (baseObject.ID == 0)
+                                        {
+                                            Int32 retChild;
+                                            Int32.TryParse(data.Rows[0][0].ToString(), out retChild);
+                                            child.ID = retChild;
+                                        }
                                         reader.Close();
                                     }
                                 }                                
@@ -177,9 +176,63 @@ namespace GIIS21.SqlEngine
             }
             catch (TransactionAbortedException ex)
             {
+                if (baseObject.ID == 0)
+                {
+                    baseObject.ID = 0;
+                    Type dataType = baseObject.GetType();
+                    var properties = dataType.GetProperties();
+                    foreach (var property in properties)
+                    {
+                        ChildAttribute сhildAttribute = property.GetCustomAttribute<ChildAttribute>();
+                        if (сhildAttribute == null) continue;
+
+                        IEnumerable<ChildBaseObject> childs = property.GetValue(baseObject) as IEnumerable<ChildBaseObject>;
+                        if (childs != null)
+                        {
+                            foreach (ChildBaseObject child in childs)
+                            {
+                                child.ParentID = 0;
+                                child.ID = 0;
+                            }
+                        }
+                    }
+                }
                 ret = -1;
             }
             return ret;                      
+        }
+
+        public List<T> Select<T>(BaseObject baseObject)
+        {
+            List<T> ret = new List<T>();
+            try
+            {
+                using (TransactionScope scope = new TransactionScope())
+                {
+                    using (SqlConnection connection = new SqlConnection(_connectionString))
+                    {
+                        connection.Open();
+                        String request = SqlGenerator.Select(baseObject);
+                        SqlCommand command = new SqlCommand(request, connection);
+                        command.CommandType = CommandType.Text;
+                        SqlDataReader reader = command.ExecuteReader();
+                        DataTable data = new DataTable();
+                        data.Load(reader);                        
+                        reader.Close();
+                        foreach (DataRow dataRow in data.Rows)
+                        {                            
+                            T currentBaseObject =  SqlGenerator.Convert<T>(dataRow);
+                            ret.Add(currentBaseObject);
+                        }
+                    }
+                    scope.Complete();
+                }
+            }
+            catch (TransactionAbortedException ex)
+            {               
+                ret = null;
+            }            
+            return ret;
         }
     }
 }

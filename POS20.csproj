@@ -74,6 +74,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Attributes\WPFAttribute.cs" />
+    <Compile Include="Helper\ConvertData.cs" />
     <Compile Include="Interface\ISave.cs" />
     <Compile Include="SqlHelper\Sql.cs" />
     <Compile Include="SqlHelper\SqlGenerator.cs" />
