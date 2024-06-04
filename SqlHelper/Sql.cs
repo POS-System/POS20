@@ -14,7 +14,7 @@ namespace GIIS21.SqlEngine
     public static class DataBaseData
     {
         public static String _database = "JDB_POS_2";
-        public static String _servername = "serv40";
+        public static String _servername = "mos834\\SQLEXPRESS";
         public static String _serverlogin = "tamuz";
         public static String _serverpassword = "effy1";
     }
@@ -43,7 +43,7 @@ namespace GIIS21.SqlEngine
         public SqlConnectionExtended(string _dataSource, string _initialCatalog, string _userID, string _Password)
         {
             _connectionString = string.Concat("Data Source=", _dataSource, ";Initial Catalog=", _initialCatalog, ";PersistSecurityInfo=True;User ID=", _userID, ";=", _Password);
-        }
+        }      
 
         public Boolean CheckConnection()
         {

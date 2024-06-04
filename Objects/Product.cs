@@ -51,7 +51,7 @@ namespace POS20.Objects
 
         public List<Product> Select(BaseObject baseObject)
         {
-            SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended();
+            SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended(true);
             return sqlConnectionExtended.Select<Product>(this);
         }
     }
