@@ -15,7 +15,7 @@ namespace POS20.Objects
     {
         private Int32 _iD;
         private Int64 _timeStamp;
-
+        
         [SqlInputColumn()]
         public virtual int ID
         {

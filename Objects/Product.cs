@@ -18,10 +18,10 @@ namespace POS20.Objects
         public Product()
         {
             stones = new List<Stone>();
-        }        
+        }
 
         [SqlOutputColumn(Name = "Model", Type = typeof(String), Size = 40)]
-        [SqlInputColumn(Name = "Model", Type = typeof(String), Size = 40)]        
+        [SqlInputColumn(Name = "Model", Type = typeof(String), Size = 40)]      
         public string Model
         {
             get
