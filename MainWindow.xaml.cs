@@ -26,10 +26,10 @@ namespace POS20
         {           
             
             InitializeComponent();
-        
+
+            Product product = new Product();
             
-            /*product.ID = 22;
-            product.Model = "Sasha1";
+            product.Model = "Roma";
             product.Stones = new List<Stone>();
 
             Stone stone1 = new Stone();
@@ -41,11 +41,11 @@ namespace POS20
             product.Stones.Add(stone1);
             product.Stones.Add(stone2);
 
-            product.Save();*/
+            product.Save();
 
 
-            Product product = new Product();
-            product.Select(product);
+           /* Product product = new Product();
+            product.Select(product);*/
         }
     }
 }

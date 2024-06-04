@@ -288,6 +288,10 @@ namespace POS20.SqlHelper
                         property.SetValue(ret, convertData.ConvertDataBoolean(name));
                         break;
 
+                    case "byte[]":
+                        property.SetValue(ret, convertData.ConvertDataByteArrayToInt64(name));
+                        break;
+
                     default:
                         break;
                 }

@@ -142,6 +142,18 @@ namespace POS20.Helper
             return false;
         }
 
+        public Int64 ConvertDataByteArrayToInt64(string _columnname)
+        {
+            Int64 i = new Int64();
+            if (_columnname != null && dataRow.Table.Columns.Contains(_columnname) && dataRow[_columnname].ToString() != null && !String.IsNullOrEmpty(dataRow[_columnname].ToString()))
+            {
+                Byte[] _timeStamp = System.Text.Encoding.UTF8.GetBytes(dataRow[_columnname].ToString());
+                i  = BitConverter.ToInt64(_timeStamp, 0);
+                return i;
+            }
+            return 0;
+        }
+
         public String ConvertDataString(string _columnname)
         {
             String i = "";

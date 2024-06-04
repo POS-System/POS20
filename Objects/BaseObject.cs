@@ -13,8 +13,8 @@ namespace POS20.Objects
 {
     public class BaseObject : ISave
     {
-        private Int32 _iD;
-        private byte[] _timeStamp;
+        private Int32 _iD;        
+        private Int64 _timeStamp;
 
         [SqlInputColumn()]
         public virtual int ID
@@ -30,23 +30,23 @@ namespace POS20.Objects
             }
         }
 
-        [SqlInputColumn(Name = "TimeStamp", Type = typeof(String))]
-        public virtual String TimeStamp
+        [SqlInputColumn(Type = typeof(byte[]))]
+        public Int64 TimeStamp
         {
             get
             {
-                return Convert.ToBase64String(_timeStamp);
+                return _timeStamp;
             }
 
             set
             {
-                _timeStamp = System.Text.Encoding.UTF8.GetBytes(value);
+                _timeStamp = value;
             }
         }
 
         public virtual int Save()
         {  
-            SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended();
+            SqlConnectionExtended sqlConnectionExtended = new SqlConnectionExtended(true);
             return sqlConnectionExtended.Save(this);
         }
 
