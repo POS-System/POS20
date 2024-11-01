@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 
 namespace POS20.Objects
 {
-    [SqlTable(Name = "Product")]
-    public class Product : BaseObject, ISelect<Product>
+    [SqlTable()]
+    public class Product : BaseObjectWithUser, ISelect<Product>
     {
         private List<Stone> stones;
         private String model;
@@ -21,7 +21,7 @@ namespace POS20.Objects
         }
 
         [SqlOutputColumn(Name = "Model", Type = typeof(String), Size = 40)]
-        [SqlInputColumn(Name = "Model", Type = typeof(String), Size = 40)]      
+        [SqlInputColumn(Name = "Model", Type = typeof(String), Size = 40)]       
         public string Model
         {
             get

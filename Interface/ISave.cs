@@ -16,4 +16,14 @@ namespace POS20.Interface
     {
         public List<T> Select(BaseObject baseObject);
     }
+
+    public interface ISelectSummary<T>
+    {
+        public Int32 SelectSummary(BaseObject baseObject);
+    }
+
+    public interface ICollectFilter
+    {
+        public void CollectFilter();
+    }    
 }

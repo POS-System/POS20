@@ -144,14 +144,20 @@ namespace POS20.Helper
 
         public Int64 ConvertDataByteArrayToInt64(string _columnname)
         {
-            Int64 i = new Int64();
+            Int64 i;
             if (_columnname != null && dataRow.Table.Columns.Contains(_columnname) && dataRow[_columnname].ToString() != null && !String.IsNullOrEmpty(dataRow[_columnname].ToString()))
             {
-                Byte[] _timeStamp = System.Text.Encoding.UTF8.GetBytes(dataRow[_columnname].ToString());
-                i  = BitConverter.ToInt64(_timeStamp, 0);
-                return i;
+                
+                /*i  = BitConverter.ToInt64((dataRow[_columnname] as byte[]));
+                return i;*/
             }
             return 0;
+        }
+
+        public Byte[] ConvertDataInt64ToByteArray(Int64 data)
+        {
+            Byte[] _timeStamp = System.Text.Encoding.UTF8.GetBytes(data.ToString());
+            return _timeStamp;
         }
 
         public String ConvertDataString(string _columnname)

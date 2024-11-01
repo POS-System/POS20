@@ -1,4 +1,5 @@
 ﻿using POS20.Attributes;
+using POS20.Helper;
 using POS20.Objects;
 using POS20.SqlHelper;
 using System;
@@ -8,6 +9,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Transactions;
+using System.Windows;
 
 namespace GIIS21.SqlEngine
 {
@@ -23,26 +25,31 @@ namespace GIIS21.SqlEngine
     {
         // соединение с базой
         private String _connectionString = "";
+        ConvertData convertData;
 
         public SqlConnectionExtended()
         {            
             _connectionString = string.Concat("Data Source=", DataBaseData._servername, ";Initial Catalog=", DataBaseData._database, ";Integrated Security=SSPI");
+            convertData = new ConvertData();
         }
 
         public SqlConnectionExtended(Boolean fullMode)
         {
             if(fullMode)
                 _connectionString = string.Concat("Data Source=", DataBaseData._servername, ";Initial Catalog=", DataBaseData._database, ";PersistSecurityInfo=True;User ID=", DataBaseData._serverlogin, ";Password=", DataBaseData._serverpassword);
+            convertData = new ConvertData();
         }
 
         public SqlConnectionExtended(string _dataSource, string _initialCatalog)
         {            
-            _connectionString = string.Concat("Data Source=", _dataSource, ";Initial Catalog=", _initialCatalog, ";Integrated Security=SSPI");            
+            _connectionString = string.Concat("Data Source=", _dataSource, ";Initial Catalog=", _initialCatalog, ";Integrated Security=SSPI");
+            convertData = new ConvertData();
         }
 
         public SqlConnectionExtended(string _dataSource, string _initialCatalog, string _userID, string _Password)
         {
             _connectionString = string.Concat("Data Source=", _dataSource, ";Initial Catalog=", _initialCatalog, ";PersistSecurityInfo=True;User ID=", _userID, ";=", _Password);
+            convertData = new ConvertData();
         }      
 
         public Boolean CheckConnection()
@@ -87,6 +94,8 @@ namespace GIIS21.SqlEngine
         public Int32 Save(BaseObject baseObject)
         {
             Int32 ret = 0;
+            Byte[] timeStamp;
+            Int32 ID = baseObject.ID;
             try
             {
                 using (TransactionScope scope = new TransactionScope())
@@ -95,17 +104,17 @@ namespace GIIS21.SqlEngine
                     {
                         connection.Open();
                         String request = "";
-                        if (baseObject.ID == 0)
+                        if (ID == 0)
                         {
-                            request = SqlGenerator.Insert(baseObject);
+                            request = SqlGenerator.Insert(baseObject);                            
                         }
 
-                        if (baseObject.ID > 0)
+                        if (ID > 0)
                         {
                             request = SqlGenerator.Update(baseObject);
                         }
 
-                        if (baseObject.ID < 0)
+                        if (ID < 0)
                         {
                             request = SqlGenerator.Delete(baseObject);
                         }
@@ -115,61 +124,99 @@ namespace GIIS21.SqlEngine
                         SqlDataReader reader = command.ExecuteReader();
                         DataTable data = new DataTable();
                         data.Load(reader);
-                        if (baseObject.ID == 0)
+                        if (ID == 0)
                         {
-                            Int32.TryParse(data.Rows[0][0].ToString(), out ret);
-                            baseObject.ID = ret;
+                            convertData = new ConvertData(data.Rows[0]);
+                            timeStamp = data.Rows[0]["TimeStamp"] as Byte[];
+                            ret = convertData.ConvertDataInt32("ID");
+                            if (ret != 0)
+                            {
+                                baseObject.ID = ret;
+                            }
+                            else 
+                            {
+                                throw new TransactionAbortedException("Вставить объект невозможно.");
+                            }                            
+                            if (timeStamp != null)
+                            {
+                                baseObject.TimeStamp = timeStamp;
+                            }
+                            else
+                            {
+                                throw new TransactionAbortedException("Вставить объект невозможно.");
+                            }
                         }
-                        if (baseObject.ID > 0)
+                        if (ID > 0)
                         {
-                            ret = baseObject.ID;
+                            convertData = new ConvertData(data.Rows[0]);
+                            timeStamp = data.Rows[0]["TimeStamp"] as Byte[];
+                            ret = convertData.ConvertDataInt32("COUNT");
+                            if (ret == 0)
+                            {
+                                throw new TransactionAbortedException("Состояние объекта изменилось. Перезагрузите экран");
+                            }
+                            if (timeStamp != null)
+                            {
+                                baseObject.TimeStamp = timeStamp;
+                            }
+                            else
+                            {
+                                throw new TransactionAbortedException("Состояние объекта изменилось. Перезагрузите экран");
+                            }
                         }
                         reader.Close();
 
                         // основной объект прошел сохранение() вставка
-                        if (ret > 0)
+                        // если есть дети - то запустим детей. Иначе конец сейва
+                        Type dataType = baseObject.GetType();
+                        var properties = dataType.GetProperties();
+                        foreach (var property in properties)
                         {
-                            // если есть дети - то запустим детей. Иначе конец сейва
-                            Type dataType = baseObject.GetType();
-                            var properties = dataType.GetProperties();
-                            foreach (var property in properties)
+                            ChildAttribute сhildAttribute = property.GetCustomAttribute<ChildAttribute>();
+                            if (сhildAttribute == null) continue;
+
+                            IEnumerable<ChildBaseObject> childs = property.GetValue(baseObject) as IEnumerable<ChildBaseObject>;
+                            if (childs != null)
                             {
-                                ChildAttribute сhildAttribute = property.GetCustomAttribute<ChildAttribute>();
-                                if (сhildAttribute == null) continue;
-
-                                IEnumerable<ChildBaseObject> childs = property.GetValue(baseObject) as IEnumerable<ChildBaseObject>;
-                                if (childs != null)
+                                foreach (ChildBaseObject child in childs)
                                 {
-                                    foreach (ChildBaseObject child in childs)
+                                    child.ParentID = ret;
+                                    if (baseObject.ID == 0)
                                     {
-                                        child.ParentID = ret;
-                                        if (baseObject.ID == 0)
-                                        {
-                                            request = SqlGenerator.Insert(child);
-                                        }
-
-                                        if (baseObject.ID > 0)
-                                        {
-                                            request = SqlGenerator.Update(child);
-                                        }                                       
-
-                                        command = new SqlCommand(request, connection);
-                                        command.CommandType = CommandType.Text;
-                                        reader = command.ExecuteReader();
-                                        data = new DataTable();
-                                        data.Load(reader);
-                                        if (baseObject.ID == 0)
-                                        {
-                                            Int32 retChild;
-                                            Int32.TryParse(data.Rows[0][0].ToString(), out retChild);
-                                            child.ID = retChild;
-                                        }
-                                        reader.Close();
+                                        request = SqlGenerator.Insert(child);
                                     }
-                                }                                
+
+                                    if (baseObject.ID > 0)
+                                    {
+                                        request = SqlGenerator.Update(child);
+                                    }                                       
+
+                                    command = new SqlCommand(request, connection);
+                                    command.CommandType = CommandType.Text;
+                                    reader = command.ExecuteReader();
+                                    data = new DataTable();
+                                    data.Load(reader);
+                                    if (baseObject.ID == 0)
+                                    {
+                                        Int32 retChild;
+                                        Int32.TryParse(data.Rows[0][0].ToString(), out retChild);
+                                        child.ID = retChild;
+                                    }
+
+                                    if (baseObject.ID > 0)
+                                    {
+                                        Int32.TryParse(data.Rows[0][0].ToString(), out ret);
+                                        if (ret != baseObject.ID)
+                                        {
+                                            MessageBox.Show("Состояние объекта изменилось. Перезагрузите экран");
+                                            throw new TransactionAbortedException();
+                                        }
+                                        ret = baseObject.ID;
+                                    }
+                                    reader.Close();
+                                }
                             }
                         }
-                        
                     }
                     scope.Complete();
                 }
@@ -197,6 +244,7 @@ namespace GIIS21.SqlEngine
                         }
                     }
                 }
+                MessageBox.Show(ex.Message);
                 ret = -1;
             }
             return ret;                      
@@ -233,6 +281,44 @@ namespace GIIS21.SqlEngine
                 ret = null;
             }            
             return ret;
+        }
+
+        public Int32 SelectSummary<T>(BaseObject baseObject)
+        {
+            Int32 ret = 0;
+            try
+            {
+                using (TransactionScope scope = new TransactionScope())
+                {
+                    using (SqlConnection connection = new SqlConnection(_connectionString))
+                    {
+                        connection.Open();
+                        String request = SqlGenerator.SelectSummary(baseObject);
+                        SqlCommand command = new SqlCommand(request, connection);
+                        command.CommandType = CommandType.Text;
+                        SqlDataReader reader = command.ExecuteReader();
+                        DataTable data = new DataTable();
+                        data.Load(reader);
+                        reader.Close();
+                        foreach (DataRow dataRow in data.Rows)
+                        {
+                            convertData = new ConvertData(data.Rows[0]);
+                            ret = convertData.ConvertDataInt32("COUNT");
+                        }
+                    }
+                    scope.Complete();
+                }
+            }
+            catch (TransactionAbortedException ex)
+            {
+                ret = 0;
+            }
+            return ret;
+        }
+
+        public void CollectFilter(BaseFilter filter)
+        {
+            SqlGenerator.SelectFilter(filter, _connectionString);            
         }
     }
 }

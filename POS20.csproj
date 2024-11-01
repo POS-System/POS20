@@ -77,6 +77,10 @@
     <Compile Include="Attributes\WPFAttribute.cs" />
     <Compile Include="Helper\ConvertData.cs" />
     <Compile Include="Interface\ISave.cs" />
+    <Compile Include="Attributes\SqlFilterAttributes.cs" />
+    <Compile Include="Objects\BaseFilter.cs" />
+    <Compile Include="Objects\Role.cs" />
+    <Compile Include="Objects\User.cs" />
     <Compile Include="SqlHelper\Sql.cs" />
     <Compile Include="SqlHelper\SqlGenerator.cs" />
     <Page Include="MainWindow.xaml">
@@ -87,7 +91,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Attributes\SqlAttributes.cs" />
+    <Compile Include="Attributes\SqlDataAttributes.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
