@@ -10,6 +10,7 @@ using System.Data.SqlClient;
 using System.Reflection;
 using System.Transactions;
 using System.Windows;
+using static POS20.SqlHelper.SqlGenerator;
 
 namespace GIIS21.SqlEngine
 {
@@ -21,11 +22,58 @@ namespace GIIS21.SqlEngine
         public static String _serverpassword = "effy1";
     }
 
+    public class Answer
+    {       
+        private String _errorMessage;
+        private DataTable datatable;
+        
+        public Answer()
+        {
+            Datatable = new DataTable();
+            _errorMessage = "";
+        }
+
+        public void SetError(String errorMessage)
+        {
+            _errorMessage = errorMessage;
+        }
+
+        public DataTable Datatable
+        {
+            get
+            {
+                return datatable;
+            }
+
+            set
+            {
+                datatable = value;
+            }
+        }
+
+        public Boolean IsError
+        {
+            get
+            {
+                return String.IsNullOrEmpty(_errorMessage);
+            }            
+        }
+    }
+
     public class SqlConnectionExtended
     {
         // соединение с базой
         private String _connectionString = "";
         ConvertData convertData;
+
+        public int ConnectionTimeOut
+        {
+            get
+            {
+                Int32 _connectTimeout = 30;                
+                return _connectTimeout;
+            }
+        }
 
         public SqlConnectionExtended()
         {            
@@ -102,25 +150,12 @@ namespace GIIS21.SqlEngine
                 {
                     using (SqlConnection connection = new SqlConnection(_connectionString))
                     {
-                        connection.Open();
+                        /*connection.Open();
                         String request = "";
-                        if (ID == 0)
-                        {
-                            request = SqlGenerator.Insert(baseObject);                            
-                        }
-
-                        if (ID > 0)
-                        {
-                            request = SqlGenerator.Update(baseObject);
-                        }
-
-                        if (ID < 0)
-                        {
-                            request = SqlGenerator.Delete(baseObject);
-                        }
+                        SqlSaveData sqlSaveData = SqlGenerator.Save(baseObject);  
 
                         SqlCommand command = new SqlCommand(request, connection);
-                        command.CommandType = CommandType.Text;
+                        command.CommandType = CommandType.StoredProcedure;
                         SqlDataReader reader = command.ExecuteReader();
                         DataTable data = new DataTable();
                         data.Load(reader);
@@ -216,6 +251,36 @@ namespace GIIS21.SqlEngine
                                     reader.Close();
                                 }
                             }
+                        }*/
+                        Answer answer = new Answer();
+                        try
+                        {
+                            SqlSaveData sqlSaveData = SqlGenerator.Save(baseObject);
+                            SqlCommand sqlCmd = new SqlCommand(sqlSaveData.StoreProcedure, connection);
+                            sqlCmd.CommandType =  CommandType.StoredProcedure;
+                            sqlCmd.CommandTimeout = ConnectionTimeOut;
+
+                            foreach (SqlParameter parametr in sqlSaveData.SqlParameters)
+                            {
+                                if (!sqlCmd.Parameters.Contains(parametr))
+                                {
+                                    sqlCmd.Parameters.Add(parametr.ParameterName, parametr.SqlDbType);
+                                    sqlCmd.Parameters[parametr.ParameterName].Value = parametr.Value;
+                                }
+                            }
+
+                            connection.Open();
+                            SqlDataReader requestanswer = sqlCmd.ExecuteReader();
+                            if (requestanswer != null)
+                            {                                
+                                answer.Datatable.Load(requestanswer);                                
+                            }
+                            connection.Close();
+                        }
+                        catch (Exception e)
+                        {
+                            answer.SetError(e.ToString());
+                            //LogSqlError(sq, _sqlAnswer.AnswerText);                            
                         }
                     }
                     scope.Complete();

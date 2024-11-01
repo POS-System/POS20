@@ -38,6 +38,14 @@ namespace POS20.SqlHelper
                 }
             }
 
+            public List<SqlParameter> SqlParameters
+            {
+                get
+                {
+                    return sqlParameters;
+                }
+            }
+
             public string Table
             {
                 get
@@ -72,13 +80,27 @@ namespace POS20.SqlHelper
             String ret = "";
             if (String.IsNullOrEmpty(attribute.Name))
             {
-                ret = $"[{dataType.Name}]";
+                ret = $"{dataType.Name}";
+            }
+            else
+            {
+                ret = $"{attribute.Name}";
+            }
+            return ret; 
+        }
+
+        static String PrepareName(PropertyInfo propertyInfo, SqlAttribute attribute)
+        {
+            String ret = "";
+            if (String.IsNullOrEmpty(attribute.Name))
+            {
+                ret = $"[{propertyInfo.Name}]";
             }
             else
             {
                 ret = $"[{attribute.Name}]";
             }
-            return ret; 
+            return ret;
         }
 
         static SqlDbType PrepareTypeData(PropertyInfo propertyInfo, SqlOutputColumnAttribute sqlOutputColumnAttribute)
@@ -99,6 +121,7 @@ namespace POS20.SqlHelper
                 case "string":
                     ret = SqlDbType.NVarChar;
                     break;
+
                 default:
                     ret = SqlDbType.NVarChar;
                     break;            
@@ -106,182 +129,43 @@ namespace POS20.SqlHelper
 
             return ret;
         }
-        static SqlParameter PrepareColumnData(SqlOutputColumnAttribute sqlOutputColumnAttribute)
+        static SqlParameter PrepareColumnData(PropertyInfo propertyInfo, SqlOutputColumnAttribute sqlOutputColumnAttribute, BaseObject data)
         {
+            SqlParameter ret = new SqlParameter();
+            ret.SqlDbType = PrepareTypeData(propertyInfo, sqlOutputColumnAttribute);
+            ret.ParameterName = PrepareName(propertyInfo, sqlOutputColumnAttribute);
 
+            if (ret.SqlDbType == SqlDbType.NVarChar)
+            {
+                ret.Value = $"'{propertyInfo.GetValue(data)}',";
+            }
+            else
+            {
+                ret.Value = $"{propertyInfo.GetValue(data)},";    
+            }
+            return ret;
         }
 
-        public static SqlSaveData Insert(BaseObject data)
+        public static SqlSaveData Save(BaseObject data)
         {
             SqlSaveData ret = new SqlSaveData();
 
-            String parametr = "";
-            String values = "";
-            string table;
-
             // таблица(и соответственно имя хранимки для сохраниния)
             Type dataType = data.GetType();            
-            SqlTableAttribute tableAttribute = dataType.GetCustomAttribute<SqlTableAttribute>();
-            PrepareTableData(dataType, tableAttribute);            
+            SqlTableAttribute tableAttribute = dataType.GetCustomAttribute<SqlTableAttribute>();            
+            ret.Table = PrepareTableData(dataType, tableAttribute);
 
             // данные(и соответственно параметры для сохранения)
-            var properties = dataType.GetProperties(); 
-            foreach (var property in properties)
-            {
-                SqlOutputColumnAttribute exportParameter = property.GetCustomAttribute<SqlOutputColumnAttribute>();
-                if (exportParameter == null) continue;
-                String name = "";
-                String value = "";
-                Type type;
-
-                if (String.IsNullOrEmpty(exportParameter.Name))
-                {
-                    name = property.Name;
-                }
-                else
-                {
-                    name = exportParameter.Name;
-                }
-                parametr += $"{name},";
-
-                // 4 специальных поля, заполняемых автоматически при сохранении
-                switch (name)
-                {
-                    case "CreatedDate":
-                    case "LastModifiedDate":
-                        value = "GETUTCDATE(),";
-                        break;                    
-                    case "CreatedByUserID":
-                    case "LastModifiedByUserID":
-                        value = $"{MainWindow.CurrentUserID},";
-                        break;
-                    default:
-                        if (type == typeof(String))
-                        {
-                            value = $"'{property.GetValue(data)}',";
-                        }
-                        else
-                        {
-                            value = $"{property.GetValue(data)},";
-                        }
-                        break;
-                }
-                values += value;
-            }
-
-            if (parametr.Length > 0)
-                parametr = parametr.TrimEnd(',');
-            if (values.Length > 0)
-                values = values.TrimEnd(',');
-            ret += $"INSERT INTO {table} ({parametr}) VALUES ({values})";
-            ret += Environment.NewLine;
-            ret += $"SELECT SCOPE_IDENTITY() AS ID, TIMESTAMP FROM {table} WHERE ID = SCOPE_IDENTITY()";
-            return ret;
-        }
-
-        public static String Delete(BaseObject data)
-        {
-            String ret = "";
-            string table;
-
-            Type dataType = data.GetType();
-            SqlTableAttribute tableAttribute = dataType.GetCustomAttribute<SqlTableAttribute>();            
-            if (String.IsNullOrEmpty(tableAttribute.Name))
-            {
-                table = dataType.Name;
-            }
-            else
-            {
-                table = tableAttribute.Name;
-            }
-
-            ret += $"DELETE FROM {table} WHERE ID = {data.ID}";
-            return ret;
-        }
-
-        public static String Update(BaseObject data)
-        {
-            String ret = "";
-            String value = "";
-            Type type;
-
-            Dictionary<String, String> fieldsValues = new Dictionary<string, string>();            
-            string table;
-
-            Type dataType = data.GetType();
-            SqlTableAttribute tableAttribute = dataType.GetCustomAttribute<SqlTableAttribute>();
-            if (String.IsNullOrEmpty(tableAttribute.Name))
-            {
-                table = $"[{dataType.Name}]";
-            }
-            else
-            {
-                table = $"[{tableAttribute.Name}]";
-            }
             var properties = dataType.GetProperties();
             foreach (var property in properties)
             {
                 SqlOutputColumnAttribute exportParameter = property.GetCustomAttribute<SqlOutputColumnAttribute>();
-                if (exportParameter == null) continue;
-                String name = "";
-                if (String.IsNullOrEmpty(exportParameter.Name))
-                {
-                    name = property.Name;
-                }
-                else
-                {
-                    name = exportParameter.Name;
-                }
-
-                if (exportParameter.Type == null)
-                {
-                    type = property.PropertyType;
-                }
-                else
-                {
-                    type = exportParameter.Type;
-                }
-
-                switch (name)
-                {
-                    case "LastModifiedDate":
-                        value = "GETUTCDATE(),";
-                        break;
-                    case "LastModifiedByUserID":
-                        value = $"{MainWindow.CurrentUserID},";
-                        break;
-                    default:
-                        
-                        
-                        if (type == typeof(String))
-                        {
-                            value = $"'{property.GetValue(data)}',";
-                        }
-                        else
-                        {
-                            value = $"{property.GetValue(data)},";
-                        }
-
-                        break;
-                }                
-
-                if(name != "CreatedDate" && name != "CreatedByUserID")
-                    fieldsValues.Add($"{name}", $"{value}");                
+                if (exportParameter == null) 
+                    continue;
+                ret.AddParameters(PrepareColumnData(property, exportParameter, data));
             }
-            
-            ret += $"UPDATE {table} SET ";
-
-            foreach(KeyValuePair<String, String> fieldsValue in fieldsValues)
-            {
-                ret += $"{fieldsValue.Key} = {fieldsValue.Value}";
-            }
-           
-            ret = ret.TrimEnd(',');
-            ret += $" WHERE ID = {data.ID} AND TIMESTAMP = {data.SqlTimeStamp}";
-            ret += Environment.NewLine;
-            ret += $"SELECT @@ROWCOUNT AS COUNT, TIMESTAMP FROM {table} WHERE ID = {data.ID}";
             return ret;
-        }
+        }        
 
         public static String Select(BaseObject data)
         {
