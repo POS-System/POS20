@@ -103,6 +103,48 @@ namespace POS20.SqlHelper
             return ret;
         }
 
+        public static SqlDbType ConvertTypeToSql(Type inputType)
+        {
+            var typeMap = new Dictionary<Type, SqlDbType>();
+            typeMap[typeof(string)] = SqlDbType.NVarChar;
+            typeMap[typeof(char[])] = SqlDbType.NVarChar;
+            typeMap[typeof(int)] = SqlDbType.Int;
+            typeMap[typeof(Int32)] = SqlDbType.Int;
+            typeMap[typeof(Int16)] = SqlDbType.SmallInt;
+            typeMap[typeof(Int64)] = SqlDbType.BigInt;
+            typeMap[typeof(Byte[])] = SqlDbType.VarBinary;
+            typeMap[typeof(Boolean)] = SqlDbType.Bit;
+            typeMap[typeof(DateTime)] = SqlDbType.DateTime2;
+            typeMap[typeof(DateTimeOffset)] = SqlDbType.DateTimeOffset;
+            typeMap[typeof(Decimal)] = SqlDbType.Decimal;
+            typeMap[typeof(Double)] = SqlDbType.Float;
+            typeMap[typeof(Decimal)] = SqlDbType.Money;
+            typeMap[typeof(Byte)] = SqlDbType.TinyInt;
+            typeMap[typeof(TimeSpan)] = SqlDbType.Time;
+            return typeMap[(inputType)];
+        }
+
+        public static Type ConvertTypeFromSql(SqlDbType inputType)
+        {
+            var typeMap = new Dictionary<SqlDbType, Type>();
+            typeMap[SqlDbType.NVarChar] = typeof(string);
+            typeMap[SqlDbType.NVarChar] = typeof(char[]);
+            typeMap[SqlDbType.Int] = typeof(int);
+            typeMap[SqlDbType.Int] = typeof(Int32);
+            typeMap[SqlDbType.SmallInt] = typeof(Int16);
+            typeMap[SqlDbType.BigInt] = typeof(Int64);
+            typeMap[SqlDbType.VarBinary] = typeof(Byte[]);
+            typeMap[SqlDbType.Bit] = typeof(Boolean);
+            typeMap[SqlDbType.DateTime2] = typeof(DateTime);
+            typeMap[SqlDbType.DateTimeOffset] = typeof(DateTimeOffset);
+            typeMap[SqlDbType.Decimal] = typeof(Decimal);
+            typeMap[SqlDbType.Float] = typeof(Double);
+            typeMap[SqlDbType.Money] = typeof(Decimal);
+            typeMap[SqlDbType.TinyInt] = typeof(Byte);
+            typeMap[SqlDbType.Time] = typeof(TimeSpan);
+            return typeMap[(inputType)];
+        }
+
         static SqlDbType PrepareTypeData(PropertyInfo propertyInfo, SqlOutputColumnAttribute sqlOutputColumnAttribute)
         {
             SqlDbType ret = SqlDbType.NVarChar;
@@ -116,16 +158,22 @@ namespace POS20.SqlHelper
                 type = sqlOutputColumnAttribute.Type;
             }
 
-            switch (type.ToString().ToLower())
-            {
-                case "string":
-                    ret = SqlDbType.NVarChar;
-                    break;
+            SqlDbType typeToSql = ConvertTypeToSql(type);
+            Type typeFromSql = ConvertTypeFromSql(typeToSql);
 
-                default:
-                    ret = SqlDbType.NVarChar;
-                    break;            
-            }
+            //switch (type.ToString().ToLower())
+            //{
+            //    case "string":
+            //        ret = SqlDbType.NVarChar;
+            //        break;
+            //    case "Int64":
+            //        ret = SqlDbType.BigInt;
+            //        break;
+
+            //    default:
+            //        ret = SqlDbType.NVarChar;
+            //        break;            
+            //}
 
             return ret;
         }
