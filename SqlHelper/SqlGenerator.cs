@@ -13,7 +13,7 @@ using System.Transactions;
 
 namespace POS20.SqlHelper
 {
-    public static class SqlGenerator 
+    public static class SqlGenerator
     {
         static ConvertData convertData = new ConvertData();
 
@@ -76,7 +76,7 @@ namespace POS20.SqlHelper
         }
 
         static String PrepareTableData(Type dataType, SqlAttribute attribute)
-        { 
+        {
             String ret = "";
             if (String.IsNullOrEmpty(attribute.Name))
             {
@@ -86,7 +86,7 @@ namespace POS20.SqlHelper
             {
                 ret = $"{attribute.Name}";
             }
-            return ret; 
+            return ret;
         }
 
         static String PrepareName(PropertyInfo propertyInfo, SqlAttribute attribute)
@@ -157,24 +157,7 @@ namespace POS20.SqlHelper
             {
                 type = sqlOutputColumnAttribute.Type;
             }
-
-            SqlDbType typeToSql = ConvertTypeToSql(type);
-            Type typeFromSql = ConvertTypeFromSql(typeToSql);
-
-            //switch (type.ToString().ToLower())
-            //{
-            //    case "string":
-            //        ret = SqlDbType.NVarChar;
-            //        break;
-            //    case "Int64":
-            //        ret = SqlDbType.BigInt;
-            //        break;
-
-            //    default:
-            //        ret = SqlDbType.NVarChar;
-            //        break;            
-            //}
-
+            ret = ConvertTypeToSql(type);
             return ret;
         }
         static SqlParameter PrepareColumnData(PropertyInfo propertyInfo, SqlOutputColumnAttribute sqlOutputColumnAttribute, BaseObject data)
@@ -182,25 +165,24 @@ namespace POS20.SqlHelper
             SqlParameter ret = new SqlParameter();
             ret.SqlDbType = PrepareTypeData(propertyInfo, sqlOutputColumnAttribute);
             ret.ParameterName = PrepareName(propertyInfo, sqlOutputColumnAttribute);
-
             if (ret.SqlDbType == SqlDbType.NVarChar)
             {
-                ret.Value = $"'{propertyInfo.GetValue(data)}',";
+                ret.Value = $"'{propertyInfo.GetValue(data)}'";
             }
             else
             {
-                ret.Value = $"{propertyInfo.GetValue(data)},";    
+                ret.Value = $"{propertyInfo.GetValue(data)}";
             }
             return ret;
         }
 
-        public static SqlSaveData Save(BaseObject data)
+        public static SqlSaveData Prepare(BaseObject baseObject)
         {
             SqlSaveData ret = new SqlSaveData();
 
             // таблица(и соответственно имя хранимки для сохраниния)
-            Type dataType = data.GetType();            
-            SqlTableAttribute tableAttribute = dataType.GetCustomAttribute<SqlTableAttribute>();            
+            Type dataType = baseObject.GetType();
+            SqlTableAttribute tableAttribute = dataType.GetCustomAttribute<SqlTableAttribute>();
             ret.Table = PrepareTableData(dataType, tableAttribute);
 
             // данные(и соответственно параметры для сохранения)
@@ -208,18 +190,42 @@ namespace POS20.SqlHelper
             foreach (var property in properties)
             {
                 SqlOutputColumnAttribute exportParameter = property.GetCustomAttribute<SqlOutputColumnAttribute>();
-                if (exportParameter == null) 
+                if (exportParameter == null)
                     continue;
-                ret.AddParameters(PrepareColumnData(property, exportParameter, data));
+                ret.AddParameters(PrepareColumnData(property, exportParameter, baseObject));
             }
             return ret;
-        }        
+        }
+
+        public static List<BaseObject> PrepareChild(BaseObject baseObject, Int32 parentID)
+        {
+            List<BaseObject> ret = new List<BaseObject>();
+            Type dataType = baseObject.GetType();
+            var properties = dataType.GetProperties();
+            foreach (var property in properties)
+            {
+                ChildAttribute сhildAttribute = property.GetCustomAttribute<ChildAttribute>();
+                if (сhildAttribute == null) continue;
+
+                IEnumerable<ChildBaseObject> childs = property.GetValue(baseObject) as IEnumerable<ChildBaseObject>;
+                if (childs != null)
+                {
+                    foreach (ChildBaseObject child in childs)
+                    {
+                        child.ParentID = parentID;
+                        ret.Add(child);
+                    }
+                }
+            }
+            return ret;
+        }
+
 
         public static String Select(BaseObject data)
         {
             // пока простой запрос
             String ret = "";
-            string table;            
+            /*string table;            
 
             List<String> names = new List<String>();
             List<String> joinNames = new List<String>();
@@ -323,11 +329,11 @@ namespace POS20.SqlHelper
             {
                 ret += joinTable;
             }
-            
+
             ret += $" ORDER BY {table}.{data.Sort} {data.SqlDirection} ";
-            
+
             // из всех записей выберем пачку. 
-            ret += $"OFFSET {data.From} ROWS FETCH NEXT {data.To} ROWS ONLY";
+            ret += $"OFFSET {data.From} ROWS FETCH NEXT {data.To} ROWS ONLY";*/
 
             return ret;
         }
@@ -336,7 +342,7 @@ namespace POS20.SqlHelper
         {
             // пока простой запрос
             String ret = "";
-            string table;
+            /*string table;
 
             List<String> names = new List<String>();
             List<String> joinNames = new List<String>();
@@ -428,7 +434,7 @@ namespace POS20.SqlHelper
             foreach (String joinTable in joinTables)
             {
                 ret += joinTable;
-            }
+            }*/
 
             return ret;
         }
@@ -436,7 +442,7 @@ namespace POS20.SqlHelper
         public static void SelectFilter(BaseFilter data, String connectionString)
         {
             String request = "";
-            string name;
+            /*string name;
             string tableoriginal;
             string table;
             string joinTable;            
@@ -542,13 +548,13 @@ namespace POS20.SqlHelper
                     {                        
                     }                    
                 }
-            } 
+            } */
         }
 
         public static T Convert<T>(DataRow data)
         {
             T ret = (T)Activator.CreateInstance(typeof(T));
-            ConvertData convertData = new ConvertData(data);
+            /*ConvertData convertData = new ConvertData(data);
             // пока простой запрос            
 
             Type dataType = typeof(T);
@@ -611,7 +617,7 @@ namespace POS20.SqlHelper
                     default:
                         break;
                 }
-            }
+            }*/
             return ret;
         }
     }

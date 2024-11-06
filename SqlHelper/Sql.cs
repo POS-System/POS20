@@ -139,182 +139,106 @@ namespace GIIS21.SqlEngine
             return data;
         }
 
-        public Int32 Save(BaseObject baseObject)
+        void SingleSave(BaseObject baseObject, SqlConnection connection)
         {
-            Int32 ret = 0;
-            Byte[] timeStamp;
-            Int32 ID = baseObject.ID;
+            Int32 retID;
+            Answer answer = new Answer();
+            try
+            {
+                SqlSaveData sqlSaveData = SqlGenerator.Prepare(baseObject);
+                SqlCommand sqlCmd = new SqlCommand(sqlSaveData.StoreProcedure, connection);
+                sqlCmd.CommandType = CommandType.StoredProcedure;
+                sqlCmd.CommandTimeout = ConnectionTimeOut;
+
+                foreach (SqlParameter parametr in sqlSaveData.SqlParameters)
+                {
+                    if (!sqlCmd.Parameters.Contains(parametr))
+                    {
+                        sqlCmd.Parameters.Add(parametr.ParameterName, parametr.SqlDbType);
+                        sqlCmd.Parameters[parametr.ParameterName].Value = parametr.Value;
+                    }
+                }
+
+                connection.Open();
+                SqlDataReader requestanswer = sqlCmd.ExecuteReader();
+                if (requestanswer != null)
+                {
+                    answer.Datatable.Load(requestanswer);
+                    convertData = new ConvertData(answer.Datatable.Rows[0]);
+                    retID = convertData.ConvertDataInt32("ID");
+
+                    // разбор ответа (вставка)
+                    if (baseObject.ID == 0)
+                    {
+                        if (retID != 0)
+                        {
+                            baseObject.ID = retID;
+                            foreach (BaseObject child in SqlGenerator.PrepareChild(baseObject, retID))
+                            {
+                                SingleSave(child, connection);
+                            }
+                        }
+                        else
+                        {
+                            throw new TransactionAbortedException("Вставить объект невозможно.");                            
+                        }
+                    }
+
+                    if (baseObject.ID > 0)
+                    {
+                        if (retID != 0 && retID != baseObject.ID)
+                        {
+                            foreach (BaseObject child in SqlGenerator.PrepareChild(baseObject, retID))
+                            {
+                                SingleSave(child, connection);
+                            }
+                        }
+                        else
+                        {
+                            throw new TransactionAbortedException("Состояние объекта изменилось. Перезагрузите экран");
+                        }
+                    }
+
+                    if (baseObject.ID < 0)
+                    {
+                        if (retID == 0 && retID != baseObject.ID)
+                        {
+                            throw new TransactionAbortedException("Удалить объект невозможно");
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                answer.SetError(e.ToString());
+                //LogSqlError(sq, _sqlAnswer.AnswerText);                            
+            }
+            finally
+            {
+                connection.Close();
+            }
+        }
+
+        public Int32 Save(BaseObject baseObject)
+        {                    
             try
             {
                 using (TransactionScope scope = new TransactionScope())
                 {
                     using (SqlConnection connection = new SqlConnection(_connectionString))
                     {
-                        /*connection.Open();
-                        String request = "";
-                        SqlSaveData sqlSaveData = SqlGenerator.Save(baseObject);  
-
-                        SqlCommand command = new SqlCommand(request, connection);
-                        command.CommandType = CommandType.StoredProcedure;
-                        SqlDataReader reader = command.ExecuteReader();
-                        DataTable data = new DataTable();
-                        data.Load(reader);
-                        if (ID == 0)
-                        {
-                            convertData = new ConvertData(data.Rows[0]);
-                            timeStamp = data.Rows[0]["TimeStamp"] as Byte[];
-                            ret = convertData.ConvertDataInt32("ID");
-                            if (ret != 0)
-                            {
-                                baseObject.ID = ret;
-                            }
-                            else 
-                            {
-                                throw new TransactionAbortedException("Вставить объект невозможно.");
-                            }                            
-                            if (timeStamp != null)
-                            {
-                                baseObject.TimeStamp = timeStamp;
-                            }
-                            else
-                            {
-                                throw new TransactionAbortedException("Вставить объект невозможно.");
-                            }
-                        }
-                        if (ID > 0)
-                        {
-                            convertData = new ConvertData(data.Rows[0]);
-                            timeStamp = data.Rows[0]["TimeStamp"] as Byte[];
-                            ret = convertData.ConvertDataInt32("COUNT");
-                            if (ret == 0)
-                            {
-                                throw new TransactionAbortedException("Состояние объекта изменилось. Перезагрузите экран");
-                            }
-                            if (timeStamp != null)
-                            {
-                                baseObject.TimeStamp = timeStamp;
-                            }
-                            else
-                            {
-                                throw new TransactionAbortedException("Состояние объекта изменилось. Перезагрузите экран");
-                            }
-                        }
-                        reader.Close();
-
-                        // основной объект прошел сохранение() вставка
-                        // если есть дети - то запустим детей. Иначе конец сейва
-                        Type dataType = baseObject.GetType();
-                        var properties = dataType.GetProperties();
-                        foreach (var property in properties)
-                        {
-                            ChildAttribute сhildAttribute = property.GetCustomAttribute<ChildAttribute>();
-                            if (сhildAttribute == null) continue;
-
-                            IEnumerable<ChildBaseObject> childs = property.GetValue(baseObject) as IEnumerable<ChildBaseObject>;
-                            if (childs != null)
-                            {
-                                foreach (ChildBaseObject child in childs)
-                                {
-                                    child.ParentID = ret;
-                                    if (baseObject.ID == 0)
-                                    {
-                                        request = SqlGenerator.Insert(child);
-                                    }
-
-                                    if (baseObject.ID > 0)
-                                    {
-                                        request = SqlGenerator.Update(child);
-                                    }                                       
-
-                                    command = new SqlCommand(request, connection);
-                                    command.CommandType = CommandType.Text;
-                                    reader = command.ExecuteReader();
-                                    data = new DataTable();
-                                    data.Load(reader);
-                                    if (baseObject.ID == 0)
-                                    {
-                                        Int32 retChild;
-                                        Int32.TryParse(data.Rows[0][0].ToString(), out retChild);
-                                        child.ID = retChild;
-                                    }
-
-                                    if (baseObject.ID > 0)
-                                    {
-                                        Int32.TryParse(data.Rows[0][0].ToString(), out ret);
-                                        if (ret != baseObject.ID)
-                                        {
-                                            MessageBox.Show("Состояние объекта изменилось. Перезагрузите экран");
-                                            throw new TransactionAbortedException();
-                                        }
-                                        ret = baseObject.ID;
-                                    }
-                                    reader.Close();
-                                }
-                            }
-                        }*/
-                        Answer answer = new Answer();
-                        try
-                        {
-                            SqlSaveData sqlSaveData = SqlGenerator.Save(baseObject);
-                            SqlCommand sqlCmd = new SqlCommand(sqlSaveData.StoreProcedure, connection);
-                            sqlCmd.CommandType =  CommandType.StoredProcedure;
-                            sqlCmd.CommandTimeout = ConnectionTimeOut;
-
-                            foreach (SqlParameter parametr in sqlSaveData.SqlParameters)
-                            {
-                                if (!sqlCmd.Parameters.Contains(parametr))
-                                {
-                                    sqlCmd.Parameters.Add(parametr.ParameterName, parametr.SqlDbType);
-                                    sqlCmd.Parameters[parametr.ParameterName].Value = parametr.Value;
-                                }
-                            }
-
-                            connection.Open();
-                            SqlDataReader requestanswer = sqlCmd.ExecuteReader();
-                            if (requestanswer != null)
-                            {                                
-                                answer.Datatable.Load(requestanswer);                                
-                            }
-                            connection.Close();
-                        }
-                        catch (Exception e)
-                        {
-                            answer.SetError(e.ToString());
-                            //LogSqlError(sq, _sqlAnswer.AnswerText);                            
-                        }
+                        SingleSave(baseObject, connection);
                     }
                     scope.Complete();
                 }
             }
             catch (TransactionAbortedException ex)
             {
-                if (baseObject.ID == 0)
-                {
-                    baseObject.ID = 0;
-                    Type dataType = baseObject.GetType();
-                    var properties = dataType.GetProperties();
-                    foreach (var property in properties)
-                    {
-                        ChildAttribute сhildAttribute = property.GetCustomAttribute<ChildAttribute>();
-                        if (сhildAttribute == null) continue;
-
-                        IEnumerable<ChildBaseObject> childs = property.GetValue(baseObject) as IEnumerable<ChildBaseObject>;
-                        if (childs != null)
-                        {
-                            foreach (ChildBaseObject child in childs)
-                            {
-                                child.ParentID = 0;
-                                child.ID = 0;
-                            }
-                        }
-                    }
-                }
-                MessageBox.Show(ex.Message);
-                ret = -1;
+                
             }
-            return ret;                      
+            return baseObject.ID;
         }
-
+        
         public List<T> Select<T>(BaseObject baseObject)
         {
             List<T> ret = new List<T>();
